@@ -60,11 +60,15 @@ semgrep scan --config="RULESET-ID" --config=PATH/TO/MYRULE.YAML PATH/TO/SRC
 semgrep scan -config=/ProRules/   PATH/TO/sourcecode
 ```
 
-## Pro analysis
+## semgrep Pro analysis
+we can login to https://semgrep.dev/orgs/-/settings to use semgrep portal,
+we upload localy project to semgrep portal and we can use pro rule and some sca !
+
 ```
 python3 -m pip install --upgrade semgrep
 semgrep login
 semgrep install-semgrep-pro
+semgrep --config auto --pro
 ```
 
 
