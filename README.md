@@ -55,6 +55,7 @@ test:
 ```
 
 ## Running Semgrep rules locally
+tips : in offline mode we should download all rules from this [repo](https://github.com/semgrep/semgrep-rules) or use pro rule that upload above.
 ```
 semgrep scan --config="RULESET-ID" --config=PATH/TO/MYRULE.YAML PATH/TO/SRC
 semgrep scan -config=/ProRules/   PATH/TO/sourcecode
