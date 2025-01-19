@@ -1,0 +1,255 @@
+rules:
+  - id: mikro-orm-nestjs
+    message: Untrusted input might be used to build a database query, which can lead
+      to a SQL injection vulnerability. An attacker can execute malicious SQL
+      statements and gain unauthorized access to sensitive data, modify, delete
+      data, or execute arbitrary system commands. To prevent this vulnerability,
+      use prepared statements that do not concatenate user-controllable strings
+      and use parameterized queries where SQL commands and user data are
+      strictly separated. Also, consider using an object-relational (ORM)
+      framework to operate with safer abstractions.
+    severity: ERROR
+    metadata:
+      likelihood: HIGH
+      impact: HIGH
+      confidence: HIGH
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-89: Improper Neutralization of Special Elements used in an SQL
+          Command ('SQL Injection')"
+      cwe2020-top25: true
+      cwe2021-top25: true
+      cwe2022-top25: true
+      display-name: SQL Injection in Mikro ORM with NestJS
+      functional-categories:
+        - db::sink::sql-or-nosql-query::mikro-orm
+        - web::source::cookie::nestjs
+        - web::source::form-data::nestjs
+        - web::source::header::nestjs
+        - web::source::http-body::nestjs
+        - web::source::http-params::nestjs
+        - web::source::url-path-params::nestjs
+      owasp:
+        - A01:2017 - Injection
+        - A03:2021 - Injection
+      references:
+        - https://owasp.org/Top10/A03_2021-Injection
+      technology:
+        - express
+        - mikro
+        - mikroorm
+        - nestjs
+        - nodejs
+        - web
+      license: Semgrep Rules License v1.0. For more details, visit
+        semgrep.dev/legal/rules-license
+      vulnerability_class:
+        - SQL Injection
+    languages:
+      - javascript
+      - typescript
+    mode: taint
+    min-version: 1.98.0
+    options:
+      interfile: true
+      symbolic_propagation: true
+      taint_assume_safe_booleans: true
+      taint_assume_safe_numbers: true
+    pattern-sources:
+      - patterns:
+          - pattern-either:
+              - pattern: function $FN(..., @Request(...) $Q, ...) {...}
+              - pattern: function $FN(..., @Req(...) $Q, ...) {...}
+              - pattern: function $FN(..., @Response(...) $Q, ...) {...}
+              - pattern: function $FN(..., @Res(...) $Q, ...) {...}
+              - pattern: function $FN(..., @Body(...) $Q, ...) {...}
+              - pattern: function $FN(..., @Headers(...) $Q, ...) {...}
+              - pattern: function $FN(..., @Query(...) $Q, ...) {...}
+          - focus-metavariable: $Q
+      - patterns:
+          - pattern-either:
+              - pattern: function $FN(..., @Param(...) $Q, ...) {...}
+          - focus-metavariable: $Q
+      - label: FILES
+        patterns:
+          - patterns:
+              - pattern-either:
+                  - pattern: function $FN(..., @UploadedFile(...) $Q, ...) {...}
+                  - pattern: function $FN(..., @UploadedFiles(...) $Q, ...) {...}
+              - focus-metavariable: $Q
+      - label: __SOURCE__
+        patterns:
+          - patterns:
+              - pattern-either:
+                  - pattern: $FILE.originalname
+                  - pattern: $FILE.fieldname
+                  - pattern: $FILE.mimetype
+                  - pattern: $FILE.buffer
+        requires: FILES
+      - label: CONN
+        patterns:
+          - patterns:
+              - pattern: $EM.getConnection(...)
+        requires: EM1 or EM2
+      - label: EM1
+        patterns:
+          - patterns:
+              - pattern-either:
+                  - pattern: |
+                      ($EM: EntityManager)
+                  - patterns:
+                      - pattern: $MORM.RequestContext.getEntityManager(...)
+                      - semgrep-internal-metavariable-name:
+                          metavariable: $MORM
+                          modules:
+                            - "@mikro-orm/core"
+                            - "@mikro-orm/better-sqlite"
+                            - "@mikro-orm/entity-generator"
+                            - "@mikro-orm/knex"
+                            - "@mikro-orm/libsql"
+                            - "@mikro-orm/mariadb"
+                            - "@mikro-orm/migrations-mongodb"
+                            - "@mikro-orm/migrations"
+                            - "@mikro-orm/mongodb"
+                            - "@mikro-orm/mssql"
+                            - "@mikro-orm/mysql"
+                            - "@mikro-orm/postgresql"
+                            - "@mikro-orm/reflection"
+                            - "@mikro-orm/seeder"
+                            - "@mikro-orm/sqlite"
+      - label: EM2
+        patterns:
+          - patterns:
+              - pattern-either:
+                  - pattern: $MK.em
+        requires: MIKRO
+      - label: MIKRO
+        patterns:
+          - patterns:
+              - pattern-either:
+                  - pattern: $MORM.MikroORM.init(...)
+              - semgrep-internal-metavariable-name:
+                  metavariable: $MORM
+                  modules:
+                    - "@mikro-orm/core"
+                    - "@mikro-orm/better-sqlite"
+                    - "@mikro-orm/entity-generator"
+                    - "@mikro-orm/knex"
+                    - "@mikro-orm/libsql"
+                    - "@mikro-orm/mariadb"
+                    - "@mikro-orm/migrations-mongodb"
+                    - "@mikro-orm/migrations"
+                    - "@mikro-orm/mongodb"
+                    - "@mikro-orm/mssql"
+                    - "@mikro-orm/mysql"
+                    - "@mikro-orm/postgresql"
+                    - "@mikro-orm/reflection"
+                    - "@mikro-orm/seeder"
+                    - "@mikro-orm/sqlite"
+    pattern-propagators:
+      - from: $CONNECTION
+        patterns:
+          - pattern: $CONNECTION. ... .execute($SINK, ...)
+        to: $SINK
+    pattern-sinks:
+      - patterns:
+          - pattern: $CONNECTION. ... .execute($SINK, ...)
+          - focus-metavariable: $SINK
+        requires: __SOURCE__ and CONN
+      - patterns:
+          - pattern: |
+              ($CONNECTION: Connection). ... .execute($SINK, ...)
+          - focus-metavariable: $SINK
+    pattern-sanitizers:
+      - patterns:
+          - pattern-either:
+              - pattern: Number(...)
+              - pattern: parseInt(...)
+              - pattern: parseFloat(...)
+              - pattern: Number.parseInt(...)
+              - pattern: Number.parseFloat(...)
+      - patterns:
+          - pattern: $UUID.$FUNC(...)
+          - metavariable-regex:
+              metavariable: $FUNC
+              regex: (version|validate|v6ToV1)
+          - semgrep-internal-metavariable-name:
+              metavariable: $UUID
+              module: uuid
+      - patterns:
+          - pattern: $DATE(...)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              modules:
+                - date-fns
+                - date-fns/fp
+                - moment
+                - luxon
+                - dayjs
+      - patterns:
+          - pattern: $DATE.$FUNC(...)
+          - metavariable-regex:
+              metavariable: $FUNC
+              regex: (utc|parseZone|tz)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              module: moment
+      - patterns:
+          - pattern: $DATE.parseJSON(...)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              modules:
+                - date-fns
+                - date-fns/fp
+      - patterns:
+          - pattern: $DATE.DateTime.$FUNC(...)
+          - metavariable-regex:
+              metavariable: $FUNC
+              regex: (fromISO|fromFormat|fromObject|fromString|fromSQL|fromHTTP|fromRFC2822|fromFormatExplain|fromStringExplain|fromFormatParser)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              modules:
+                - luxon
+      - patterns:
+          - pattern: $DATE.$OBJ.$FUNC(...)
+          - metavariable-regex:
+              metavariable: $OBJ
+              regex: (LocalDate|LocalDateTime|LocalTime|OffsetDateTime|OffsetTime|ZonedDateTime|DateTimeFormatter|OffsetDate|LocalDateRange|OffsetDate)
+          - metavariable-regex:
+              metavariable: $FUNC
+              regex: (parse|parse1|parse2)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              modules:
+                - "@js-joda/core"
+                - "@js-joda/timezone"
+                - "@js-joda/locale"
+                - "@js-joda/extra"
+      - pattern-either:
+          - pattern: new Date(...)
+          - pattern: Intl. ... .format(...)
+      - by-side-effect: true
+        patterns:
+          - pattern: $VALIDATOR.$FUNC($SINK,...)
+          - focus-metavariable: $SINK
+          - semgrep-internal-metavariable-name:
+              metavariable: $VALIDATOR
+              module: validator
+          - pattern-not: $V.contains(...)
+          - pattern-not: $V.equals(...)
+          - pattern-not: $V.isAfter(...)
+          - pattern-not: $V.isJSON(...)
+          - pattern-not: $V.isLength(...)
+          - pattern-not: $V.isLowercase(...)
+          - pattern-not: $V.isMultibyte(...)
+          - pattern-not: $V.isStrongPassword(...)
+          - pattern-not: $V.isURL(...)
+          - pattern-not: $V.isUppercase(...)
+          - pattern-not: $V.isVariableWidth(...)
+          - pattern-not: $V.matches(...)
+          - pattern-not: $V.unescape(...)
+          - pattern-not: $V.trim(...)
+          - pattern-not: $V.ltrim(...)
+          - pattern-not: $V.rtrim(...)

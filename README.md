@@ -32,3 +32,31 @@ Semgrep is an open-source static analysis tool designed to find vulnerabilities,
 * Integrating into the security testing pipeline for proactive vulnerability detection.
 
 
+## Install Semgrep
+```
+pip install semgrep
+semgrep --version
+```
+
+## Choose or Create Rules
+```
+https://github.com/semgrep/semgrep-rules
+```
+
+## Integrate into CI/CD Pipeline
+```
+stages:
+  - test
+
+test:
+  image: semgrep/semgrep
+  script:
+    - semgrep --config=python-security --path=./my-python-project/
+```
+
+## Running Semgrep rules locally
+```
+semgrep scan --config="RULESET-ID" --config=PATH/TO/MYRULE.YAML PATH/TO/SRC
+semgrep scan -config=/ProRules/   PATH/TO/sourcecode
+```
+

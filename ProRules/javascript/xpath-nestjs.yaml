@@ -1,0 +1,191 @@
+rules:
+  - id: xpath-nestjs
+    message: XPath queries are constructed dynamically on user-controlled input.
+      This could lead to XPath injection if variables passed into the evaluate
+      or compile commands are not properly sanitized. Xpath injection could lead
+      to unauthorized access to sensitive information in XML documents.
+      Thoroughly sanitize user input or use parameterized XPath queries if you
+      can.
+    severity: WARNING
+    metadata:
+      likelihood: MEDIUM
+      impact: MEDIUM
+      confidence: HIGH
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-643: Improper Neutralization of Data within XPath Expressions
+          ('XPath Injection')"
+      display-name: XPath Injection in xpath with with NestJS
+      functional-categories:
+        - web::source::cookie::nestjs
+        - web::source::form-data::nestjs
+        - web::source::header::nestjs
+        - web::source::http-body::nestjs
+        - web::source::http-params::nestjs
+        - web::source::url-path-params::nestjs
+        - xml::sink::xml-parser::xpath
+        - xml::sink::xpath::xpath
+      owasp:
+        - A03:2021 - Injection
+      references:
+        - https://owasp.org/Top10/A03_2021-Injection
+      technology:
+        - express
+        - nestjs
+        - nodejs
+        - web
+        - xpath
+      license: Semgrep Rules License v1.0. For more details, visit
+        semgrep.dev/legal/rules-license
+      vulnerability_class:
+        - XPath Injection
+    languages:
+      - javascript
+      - typescript
+    mode: taint
+    min-version: 1.98.0
+    options:
+      interfile: true
+      symbolic_propagation: true
+      taint_assume_safe_booleans: true
+      taint_assume_safe_numbers: true
+    pattern-sources:
+      - patterns:
+          - pattern-either:
+              - pattern: function $FN(..., @Request(...) $Q, ...) {...}
+              - pattern: function $FN(..., @Req(...) $Q, ...) {...}
+              - pattern: function $FN(..., @Response(...) $Q, ...) {...}
+              - pattern: function $FN(..., @Res(...) $Q, ...) {...}
+              - pattern: function $FN(..., @Body(...) $Q, ...) {...}
+              - pattern: function $FN(..., @Headers(...) $Q, ...) {...}
+              - pattern: function $FN(..., @Query(...) $Q, ...) {...}
+          - focus-metavariable: $Q
+      - patterns:
+          - pattern-either:
+              - pattern: function $FN(..., @Param(...) $Q, ...) {...}
+          - focus-metavariable: $Q
+      - label: FILES
+        patterns:
+          - patterns:
+              - pattern-either:
+                  - pattern: function $FN(..., @UploadedFile(...) $Q, ...) {...}
+                  - pattern: function $FN(..., @UploadedFiles(...) $Q, ...) {...}
+              - focus-metavariable: $Q
+      - label: __SOURCE__
+        patterns:
+          - patterns:
+              - pattern-either:
+                  - pattern: $FILE.originalname
+                  - pattern: $FILE.fieldname
+                  - pattern: $FILE.mimetype
+                  - pattern: $FILE.buffer
+        requires: FILES
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: $XML.parse($SINK, ...)
+              - pattern: $XML.select($SINK, ...)
+              - pattern: $XML.select1($SINK, ...)
+              - patterns:
+                  - pattern-inside: |
+                      $SELECT = $XML.useNamespaces(...);
+                      ...
+                  - pattern: $SELECT($SINK, ...)
+          - semgrep-internal-metavariable-name:
+              metavariable: $XML
+              modules:
+                - xpath
+          - focus-metavariable: $SINK
+    pattern-sanitizers:
+      - patterns:
+          - pattern-either:
+              - pattern: Number(...)
+              - pattern: parseInt(...)
+              - pattern: parseFloat(...)
+              - pattern: Number.parseInt(...)
+              - pattern: Number.parseFloat(...)
+      - patterns:
+          - pattern: $UUID.$FUNC(...)
+          - metavariable-regex:
+              metavariable: $FUNC
+              regex: (version|validate|v6ToV1)
+          - semgrep-internal-metavariable-name:
+              metavariable: $UUID
+              module: uuid
+      - patterns:
+          - pattern: $DATE(...)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              modules:
+                - date-fns
+                - date-fns/fp
+                - moment
+                - luxon
+                - dayjs
+      - patterns:
+          - pattern: $DATE.$FUNC(...)
+          - metavariable-regex:
+              metavariable: $FUNC
+              regex: (utc|parseZone|tz)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              module: moment
+      - patterns:
+          - pattern: $DATE.parseJSON(...)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              modules:
+                - date-fns
+                - date-fns/fp
+      - patterns:
+          - pattern: $DATE.DateTime.$FUNC(...)
+          - metavariable-regex:
+              metavariable: $FUNC
+              regex: (fromISO|fromFormat|fromObject|fromString|fromSQL|fromHTTP|fromRFC2822|fromFormatExplain|fromStringExplain|fromFormatParser)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              modules:
+                - luxon
+      - patterns:
+          - pattern: $DATE.$OBJ.$FUNC(...)
+          - metavariable-regex:
+              metavariable: $OBJ
+              regex: (LocalDate|LocalDateTime|LocalTime|OffsetDateTime|OffsetTime|ZonedDateTime|DateTimeFormatter|OffsetDate|LocalDateRange|OffsetDate)
+          - metavariable-regex:
+              metavariable: $FUNC
+              regex: (parse|parse1|parse2)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              modules:
+                - "@js-joda/core"
+                - "@js-joda/timezone"
+                - "@js-joda/locale"
+                - "@js-joda/extra"
+      - pattern-either:
+          - pattern: new Date(...)
+          - pattern: Intl. ... .format(...)
+      - by-side-effect: true
+        patterns:
+          - pattern: $VALIDATOR.$FUNC($SINK,...)
+          - focus-metavariable: $SINK
+          - semgrep-internal-metavariable-name:
+              metavariable: $VALIDATOR
+              module: validator
+          - pattern-not: $V.contains(...)
+          - pattern-not: $V.equals(...)
+          - pattern-not: $V.isAfter(...)
+          - pattern-not: $V.isJSON(...)
+          - pattern-not: $V.isLength(...)
+          - pattern-not: $V.isLowercase(...)
+          - pattern-not: $V.isMultibyte(...)
+          - pattern-not: $V.isStrongPassword(...)
+          - pattern-not: $V.isURL(...)
+          - pattern-not: $V.isUppercase(...)
+          - pattern-not: $V.isVariableWidth(...)
+          - pattern-not: $V.matches(...)
+          - pattern-not: $V.unescape(...)
+          - pattern-not: $V.trim(...)
+          - pattern-not: $V.ltrim(...)
+          - pattern-not: $V.rtrim(...)

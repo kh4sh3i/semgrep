@@ -1,0 +1,62 @@
+rules:
+  - id: insecure-crypto-hash
+    message: Insecure cryptographic hash algorithms should not be used, they often
+      have known vulnerabilities like collision. Use a more secure hash
+      algorithm instead such as `HMACSHA256`. If you hash passwords, use a slow
+      hash function like `Argon2` or `scrypt`.
+    severity: INFO
+    metadata:
+      likelihood: LOW
+      impact: MEDIUM
+      confidence: MEDIUM
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-328: Use of Weak Hash"
+      display-name: Insecure Cryptographic Hash
+      functional-categories:
+        - crypto::search::config
+        - crypto::search::hash-algorithm
+      owasp:
+        - A02:2021 - Cryptographic Failures
+        - A03:2017 - Sensitive Data Exposure
+      references:
+        - https://cwe.mitre.org/data/definitions/328.html
+        - https://owasp.org/Top10/A02_2021-Cryptographic_Failures
+      technology:
+        - .net
+        - crypto
+        - csharp
+        - dotnet
+      license: Semgrep Rules License v1.0. For more details, visit
+        semgrep.dev/legal/rules-license
+      vulnerability_class:
+        - Insecure Hashing Algorithm
+    languages:
+      - csharp
+    patterns:
+      - patterns:
+          - pattern-either:
+              - patterns:
+                  - pattern-either:
+                      - pattern: $TY.ComputeHash(...)
+                  - metavariable-type:
+                      metavariable: $TY
+                      types:
+                        - HMACMD5
+                        - HMACSHA1
+                        - MD5
+                        - MD5CryptoServiceProvider
+                        - SHA1
+                        - SHA1CryptoServiceProvider
+                        - SHA1Managed
+                        - SHA256
+                        - SHA256CryptoServiceProvider
+                        - SHA256Managed
+                        - SHA384
+                        - SHA384CryptoServiceProvider
+                        - SHA384Managed
+                        - SHA512
+                        - SHA512CryptoServiceProvider
+                        - SHA512Managed

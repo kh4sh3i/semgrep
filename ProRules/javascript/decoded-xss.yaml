@@ -1,0 +1,225 @@
+rules:
+  - id: decoded-xss
+    message: Untrusted input could be used to tamper with a web page rendering,
+      which can lead to a Cross-site scripting (XSS) vulnerability. XSS
+      vulnerabilities occur when untrusted input executes malicious JavaScript
+      code, leading to issues such as account compromise and sensitive
+      information leakage. To prevent this vulnerability, validate the user
+      input, perform contextual output encoding or sanitize the input.
+    severity: WARNING
+    metadata:
+      likelihood: MEDIUM
+      impact: MEDIUM
+      confidence: HIGH
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-79: Improper Neutralization of Input During Web Page Generation
+          ('Cross-site Scripting')"
+      cwe2020-top25: true
+      cwe2021-top25: true
+      cwe2022-top25: true
+      display-name: Cross-Site Scripting (XSS)
+      functional-categories:
+        - web::sink::html-webpage::WebAPI
+        - web::source::url-path-params::WebAPI
+      owasp:
+        - A03:2021 - Injection
+        - A07:2017 - Cross-Site Scripting (XSS)
+      references:
+        - https://owasp.org/Top10/A03_2021-Injection
+      technology:
+        - browser
+      license: Semgrep Rules License v1.0. For more details, visit
+        semgrep.dev/legal/rules-license
+      vulnerability_class:
+        - Cross-Site-Scripting (XSS)
+    languages:
+      - javascript
+      - typescript
+    mode: taint
+    min-version: 1.91.0
+    options:
+      interfile: true
+      symbolic_propagation: true
+      taint_assume_safe_booleans: true
+      taint_assume_safe_numbers: true
+    pattern-sources:
+      - label: __SOURCE__
+        patterns:
+          - patterns:
+              - pattern-either:
+                  - pattern: document
+                  - pattern: $THIS. ... .document
+        requires: DOCURI
+      - label: DOCURI
+        patterns:
+          - patterns:
+              - pattern-either:
+                  - pattern: $DOCUMENT.baseURI
+                  - pattern: $DOCUMENT.documentURI
+      - label: LOCATION
+        patterns:
+          - patterns:
+              - pattern-either:
+                  - pattern: window.location
+                  - pattern: document.location
+                  - pattern: location
+                  - pattern: $THIS. ... .location
+      - label: __SOURCE__
+        patterns:
+          - patterns:
+              - pattern-either:
+                  - pattern: $LOCATION.hash
+                  - pattern: $LOCATION.search
+                  - pattern: $LOCATION.href
+                  - pattern: $LOCATION.pathname
+        requires: LOCATION
+      - label: DECODE
+        patterns:
+          - patterns:
+              - pattern-either:
+                  - pattern: decodeURIComponent($X)
+                  - pattern: decodeURI($X)
+                  - pattern: unescape($X)
+              - focus-metavariable: $X
+        requires: __SOURCE__
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: $ELEMENT. ... .innerHTML = $X
+              - pattern: $ELEMENT. ... .outerHTML = $X
+              - pattern: document.write($X)
+              - pattern: $THIS. ... .document.write($X)
+              - pattern: document.writeln($X)
+              - pattern: $THIS. ... .document.writeln($X)
+              - pattern: $THIS. ... .insertAdjacentHTML(...,$X)
+          - focus-metavariable: $X
+        requires: DECODE
+    pattern-sanitizers:
+      - patterns:
+          - pattern-either:
+              - pattern: Number(...)
+              - pattern: parseInt(...)
+              - pattern: parseFloat(...)
+              - pattern: Number.parseInt(...)
+              - pattern: Number.parseFloat(...)
+      - patterns:
+          - pattern: $UUID.$FUNC(...)
+          - metavariable-regex:
+              metavariable: $FUNC
+              regex: (version|validate|v6ToV1)
+          - semgrep-internal-metavariable-name:
+              metavariable: $UUID
+              module: uuid
+      - patterns:
+          - pattern: $DATE(...)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              modules:
+                - date-fns
+                - date-fns/fp
+                - moment
+                - luxon
+                - dayjs
+      - patterns:
+          - pattern: $DATE.$FUNC(...)
+          - metavariable-regex:
+              metavariable: $FUNC
+              regex: (utc|parseZone|tz)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              module: moment
+      - patterns:
+          - pattern: $DATE.parseJSON(...)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              modules:
+                - date-fns
+                - date-fns/fp
+      - patterns:
+          - pattern: $DATE.DateTime.$FUNC(...)
+          - metavariable-regex:
+              metavariable: $FUNC
+              regex: (fromISO|fromFormat|fromObject|fromString|fromSQL|fromHTTP|fromRFC2822|fromFormatExplain|fromStringExplain|fromFormatParser)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              modules:
+                - luxon
+      - patterns:
+          - pattern: $DATE.$OBJ.$FUNC(...)
+          - metavariable-regex:
+              metavariable: $OBJ
+              regex: (LocalDate|LocalDateTime|LocalTime|OffsetDateTime|OffsetTime|ZonedDateTime|DateTimeFormatter|OffsetDate|LocalDateRange|OffsetDate)
+          - metavariable-regex:
+              metavariable: $FUNC
+              regex: (parse|parse1|parse2)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              modules:
+                - "@js-joda/core"
+                - "@js-joda/timezone"
+                - "@js-joda/locale"
+                - "@js-joda/extra"
+      - pattern-either:
+          - pattern: new Date(...)
+          - pattern: Intl. ... .format(...)
+      - by-side-effect: true
+        patterns:
+          - pattern: $VALIDATOR.$FUNC($SINK,...)
+          - focus-metavariable: $SINK
+          - semgrep-internal-metavariable-name:
+              metavariable: $VALIDATOR
+              module: validator
+          - pattern-not: $V.contains(...)
+          - pattern-not: $V.equals(...)
+          - pattern-not: $V.isAfter(...)
+          - pattern-not: $V.isJSON(...)
+          - pattern-not: $V.isLength(...)
+          - pattern-not: $V.isLowercase(...)
+          - pattern-not: $V.isMultibyte(...)
+          - pattern-not: $V.isStrongPassword(...)
+          - pattern-not: $V.isURL(...)
+          - pattern-not: $V.isUppercase(...)
+          - pattern-not: $V.isVariableWidth(...)
+          - pattern-not: $V.matches(...)
+          - pattern-not: $V.unescape(...)
+          - pattern-not: $V.trim(...)
+          - pattern-not: $V.ltrim(...)
+          - pattern-not: $V.rtrim(...)
+      - patterns:
+          - pattern: $UNDERSCORE_STRING.escapeHTML(...)
+          - semgrep-internal-metavariable-name:
+              metavariable: $UNDERSCORE_STRING
+              module: underscore.string
+      - patterns:
+          - pattern: $S.sanitize(...)
+          - semgrep-internal-metavariable-name:
+              metavariable: $S
+              modules:
+                - dompurify
+                - isomorphic-dompurify
+      - patterns:
+          - pattern: $S(...)
+          - semgrep-internal-metavariable-name:
+              metavariable: $S
+              modules:
+                - dompurify
+                - isomorphic-dompurify
+                - xss
+                - sanitize-html
+      - patterns:
+          - pattern: $S.escape(...)
+          - semgrep-internal-metavariable-name:
+              metavariable: $S
+              modules:
+                - he
+                - html-entities
+      - patterns:
+          - pattern: $S.render(...)
+          - semgrep-internal-metavariable-name:
+              metavariable: $S
+              modules:
+                - remarkable
+                - template-engine

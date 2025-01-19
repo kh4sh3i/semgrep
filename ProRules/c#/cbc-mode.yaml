@@ -1,0 +1,68 @@
+rules:
+  - id: cbc-mode
+    message: "`$TY` is setup to use the CBC cipher mode. This mode is insecure
+      because it is vulnerable to padding oracle attacks. Use a more secure
+      scheme like `AesGcm` or a mode like `CipherMode.CTS`."
+    severity: WARNING
+    metadata:
+      likelihood: LOW
+      impact: HIGH
+      confidence: MEDIUM
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-327: Use of a Broken or Risky Cryptographic Algorithm"
+      display-name: |
+        Insecure Cipher Mode: CBC
+      functional-categories:
+        - crypto::search::config
+        - crypto::search::mode
+      owasp:
+        - A02:2021 - Cryptographic Failures
+        - A03:2017 - Sensitive Data Exposure
+      references:
+        - https://cwe.mitre.org/data/definitions/327.html
+        - https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/quality-rules/ca5358
+        - https://owasp.org/Top10/A02_2021-Cryptographic_Failures
+      technology:
+        - .net
+        - crypto
+        - csharp
+        - dotnet
+      license: Semgrep Rules License v1.0. For more details, visit
+        semgrep.dev/legal/rules-license
+      vulnerability_class:
+        - Cryptographic Issues
+    languages:
+      - csharp
+    patterns:
+      - patterns:
+          - pattern-either:
+              - patterns:
+                  - pattern-either:
+                      - pattern: $TY.EncryptCbc(...)
+                      - pattern: $TY.DecryptCbc(...)
+                      - pattern: $TY.TryEncryptCbc(...)
+                      - pattern: $TY.TryDecryptCbc(...)
+                      - pattern: $TY.TryEncryptCbcCore(...)
+                      - pattern: $TY.TryDecryptCbcCore(...)
+                      - pattern: $TY.Mode = CipherMode.CBC
+                      - pattern: new $TY(...) {..., Mode = CipherMode.CBC, ... }
+                  - metavariable-type:
+                      metavariable: $TY
+                      types:
+                        - Aes
+                        - AesCng
+                        - AesCryptoServiceProvider
+                        - AesManaged
+                        - DES
+                        - DESCryptoServiceProvider
+                        - RC2
+                        - RC2CryptoServiceProvider
+                        - Rijndael
+                        - RijndaelManaged
+                        - SymmetricAlgorithm
+                        - TripleDES
+                        - TripleDESCng
+                        - TripleDESCryptoServiceProvider

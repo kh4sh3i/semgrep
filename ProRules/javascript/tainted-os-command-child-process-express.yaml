@@ -1,0 +1,267 @@
+rules:
+  - id: tainted-os-command-child-process-express
+    message: "Untrusted input might be injected into a command executed by the
+      application, which can lead to a command injection vulnerability. An
+      attacker can execute arbitrary commands, potentially gaining complete
+      control of the system. To prevent this vulnerability, avoid executing OS
+      commands with user input. If this is unavoidable, validate and sanitize
+      the input, and use safe methods for executing the commands. For more
+      information, see: [JavaScript command injection
+      prevention](https://semgrep.dev/docs/cheat-sheets/javascript-command-inje\
+      ction/)"
+    severity: ERROR
+    metadata:
+      likelihood: MEDIUM
+      impact: HIGH
+      confidence: HIGH
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-78: Improper Neutralization of Special Elements used in an OS
+          Command ('OS Command Injection')"
+      cwe2020-top25: true
+      cwe2021-top25: true
+      cwe2022-top25: true
+      display-name: OS Command Injection in Express with Child Process
+      functional-categories:
+        - os::sink::os-command-or-thread::child-process
+        - web::source::cookie::express
+        - web::source::form-data::express
+        - web::source::header::express
+        - web::source::http-body::express
+        - web::source::http-params::express
+        - web::source::url-path-params::express
+      owasp:
+        - A01:2017 - Injection
+        - A03:2021 - Injection
+      references:
+        - https://owasp.org/Top10/A03_2021-Injection
+      supersedes:
+        - javascript.lang.security.audit.dangerous-spawn-shell
+        - javascript.lang.security.audit.spawn-shell-true
+        - javascript.lang.security.detect-child-process
+        - javascript.lang.security.spawn-git-clone
+        - javascript.lang.security.spawn-shell-true
+      technology:
+        - express
+        - nodejs
+        - web
+      license: Semgrep Rules License v1.0. For more details, visit
+        semgrep.dev/legal/rules-license
+      vulnerability_class:
+        - Command Injection
+    languages:
+      - javascript
+      - typescript
+    mode: taint
+    min-version: 1.91.0
+    options:
+      interfile: true
+      symbolic_propagation: true
+      taint_assume_safe_booleans: true
+      taint_assume_safe_numbers: true
+    pattern-sources:
+      - pattern-either:
+          - patterns:
+              - pattern-either:
+                  - pattern-inside: function ... ($REQ, $RES) {...}
+                  - pattern-inside: function ... ($REQ, $RES, $NEXT) {...}
+              - focus-metavariable: $REQ
+              - pattern-either:
+                  - pattern: $REQ.query
+                  - pattern: $REQ.body
+                  - pattern: $REQ.cookies
+                  - pattern: $REQ.headers
+                  - pattern: $REQ.headersDistinct
+                  - pattern: $REQ.rawHeaders
+                  - pattern: $REQ.get(...)
+                  - pattern: $REQ.header(...)
+          - patterns:
+              - pattern-either:
+                  - pattern-inside: |
+                      function ... ({ $REQ }: Request, $RES) {...}
+                  - pattern-inside: |
+                      function ... ({ $REQ }: $EXPRESS.Request, $RES) {...}
+                  - pattern-inside: |
+                      function ... ({ $REQ }: Request, $RES, $NEXT) {...}
+                  - pattern-inside: >
+                      function ... ({ $REQ }: $EXPRESS.Request, $RES, $NEXT)
+                      {...}
+              - focus-metavariable: $REQ
+              - pattern-either:
+                  - pattern: query
+                  - pattern: body
+                  - pattern: cookies
+                  - pattern: headers
+                  - pattern: headersDistinct
+                  - pattern: rawHeaders
+                  - pattern: get(...)
+                  - pattern: header(...)
+      - pattern-either:
+          - patterns:
+              - pattern-either:
+                  - pattern-inside: function ... ($REQ, $RES) {...}
+                  - pattern-inside: function ... ($REQ, $RES, $NEXT) {...}
+              - focus-metavariable: $REQ
+              - pattern-either:
+                  - pattern: $REQ.params
+          - patterns:
+              - pattern-either:
+                  - pattern-inside: |
+                      function ... ({ $REQ }: Request, $RES) {...}
+                  - pattern-inside: |
+                      function ... ({ $REQ }: $EXPRESS.Request, $RES) {...}
+                  - pattern-inside: |
+                      function ... ({ $REQ }: Request, $RES, $NEXT) {...}
+                  - pattern-inside: >
+                      function ... ({ $REQ }: $EXPRESS.Request, $RES, $NEXT)
+                      {...}
+              - focus-metavariable: $REQ
+              - pattern-either:
+                  - pattern: params
+      - label: FILES
+        patterns:
+          - pattern-either:
+              - patterns:
+                  - pattern-either:
+                      - pattern-inside: function ... ($REQ, $RES) {...}
+                      - pattern-inside: function ... ($REQ, $RES, $NEXT) {...}
+                  - focus-metavariable: $REQ
+                  - pattern-either:
+                      - pattern: $REQ.file
+                      - pattern: $REQ.files
+              - patterns:
+                  - pattern-either:
+                      - pattern-inside: |
+                          function ... ({ $REQ }: Request, $RES) {...}
+                      - pattern-inside: |
+                          function ... ({ $REQ }: $EXPRESS.Request, $RES) {...}
+                      - pattern-inside: |
+                          function ... ({ $REQ }: Request, $RES, $NEXT) {...}
+                      - pattern-inside: >
+                          function ... ({ $REQ }: $EXPRESS.Request, $RES, $NEXT)
+                          {...}
+                  - focus-metavariable: $REQ
+                  - pattern-either:
+                      - pattern: file
+                      - pattern: files
+      - label: __SOURCE__
+        patterns:
+          - patterns:
+              - pattern-either:
+                  - pattern: $FILE.originalname
+                  - pattern: $FILE.fieldname
+                  - pattern: $FILE.mimetype
+                  - pattern: $FILE.buffer
+        requires: FILES
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: $CHILD_PROCESS.exec($SINK, ...)
+              - pattern: $CHILD_PROCESS.execSync($SINK, ...)
+              - pattern: $CHILD_PROCESS.spawn($SINK, ...)
+              - pattern: $CHILD_PROCESS.spawnSync($SINK, ...)
+              - pattern: $CHILD_PROCESS.exec("git", ["clone", $SINK, ...])
+              - pattern: $CHILD_PROCESS.execSync("git", ["clone", $SINK, ...])
+              - pattern: $CHILD_PROCESS.spawn("git", ["clone", $SINK, ...])
+              - pattern: $CHILD_PROCESS.spawnSync("git", ["clone", $SINK, ...])
+          - semgrep-internal-metavariable-name:
+              metavariable: $CHILD_PROCESS
+              module: child_process
+          - focus-metavariable: $SINK
+    pattern-sanitizers:
+      - patterns:
+          - pattern-either:
+              - pattern: Number(...)
+              - pattern: parseInt(...)
+              - pattern: parseFloat(...)
+              - pattern: Number.parseInt(...)
+              - pattern: Number.parseFloat(...)
+      - patterns:
+          - pattern: $UUID.$FUNC(...)
+          - metavariable-regex:
+              metavariable: $FUNC
+              regex: (version|validate|v6ToV1)
+          - semgrep-internal-metavariable-name:
+              metavariable: $UUID
+              module: uuid
+      - patterns:
+          - pattern: $DATE(...)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              modules:
+                - date-fns
+                - date-fns/fp
+                - moment
+                - luxon
+                - dayjs
+      - patterns:
+          - pattern: $DATE.$FUNC(...)
+          - metavariable-regex:
+              metavariable: $FUNC
+              regex: (utc|parseZone|tz)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              module: moment
+      - patterns:
+          - pattern: $DATE.parseJSON(...)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              modules:
+                - date-fns
+                - date-fns/fp
+      - patterns:
+          - pattern: $DATE.DateTime.$FUNC(...)
+          - metavariable-regex:
+              metavariable: $FUNC
+              regex: (fromISO|fromFormat|fromObject|fromString|fromSQL|fromHTTP|fromRFC2822|fromFormatExplain|fromStringExplain|fromFormatParser)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              modules:
+                - luxon
+      - patterns:
+          - pattern: $DATE.$OBJ.$FUNC(...)
+          - metavariable-regex:
+              metavariable: $OBJ
+              regex: (LocalDate|LocalDateTime|LocalTime|OffsetDateTime|OffsetTime|ZonedDateTime|DateTimeFormatter|OffsetDate|LocalDateRange|OffsetDate)
+          - metavariable-regex:
+              metavariable: $FUNC
+              regex: (parse|parse1|parse2)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              modules:
+                - "@js-joda/core"
+                - "@js-joda/timezone"
+                - "@js-joda/locale"
+                - "@js-joda/extra"
+      - pattern-either:
+          - pattern: new Date(...)
+          - pattern: Intl. ... .format(...)
+      - by-side-effect: true
+        patterns:
+          - pattern: $VALIDATOR.$FUNC($SINK,...)
+          - focus-metavariable: $SINK
+          - semgrep-internal-metavariable-name:
+              metavariable: $VALIDATOR
+              module: validator
+          - pattern-not: $V.contains(...)
+          - pattern-not: $V.equals(...)
+          - pattern-not: $V.isAfter(...)
+          - pattern-not: $V.isJSON(...)
+          - pattern-not: $V.isLength(...)
+          - pattern-not: $V.isLowercase(...)
+          - pattern-not: $V.isMultibyte(...)
+          - pattern-not: $V.isStrongPassword(...)
+          - pattern-not: $V.isURL(...)
+          - pattern-not: $V.isUppercase(...)
+          - pattern-not: $V.isVariableWidth(...)
+          - pattern-not: $V.matches(...)
+          - pattern-not: $V.unescape(...)
+          - pattern-not: $V.trim(...)
+          - pattern-not: $V.ltrim(...)
+          - pattern-not: $V.rtrim(...)
+      - patterns:
+          - pattern: "[...]"
+          - pattern-not: '["clone", ...]'
+          - pattern-not: '["git", "clone", ...]'

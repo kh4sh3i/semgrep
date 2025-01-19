@@ -1,0 +1,226 @@
+rules:
+  - id: fs-nestjs
+    message: The application builds a file path from potentially untrusted data,
+      which can lead to a path traversal vulnerability. An attacker can
+      manipulate the path which the application uses to access files. If the
+      application does not validate user input and sanitize file paths,
+      sensitive files such as configuration or user data can be accessed,
+      potentially creating or overwriting files. To prevent this vulnerability,
+      validate and sanitize any input that is used to create references to file
+      paths. Also, enforce strict file access controls. For example, choose
+      privileges allowing public-facing applications to access only the required
+      files.
+    severity: ERROR
+    metadata:
+      likelihood: MEDIUM
+      impact: HIGH
+      confidence: HIGH
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-22: Improper Limitation of a Pathname to a Restricted Directory
+          ('Path Traversal')"
+      cwe2020-top25: true
+      cwe2021-top25: true
+      cwe2022-top25: true
+      display-name: Path Traversal in fs with NestJS
+      functional-categories:
+        - file::sink::file-access::fs
+        - file::sink::file-access::fs/promises
+        - file::sink::file-access::node:fs
+        - file::sink::file-access::node:fs/promises
+        - web::source::cookie::nestjs
+        - web::source::form-data::nestjs
+        - web::source::header::nestjs
+        - web::source::http-body::nestjs
+        - web::source::http-params::nestjs
+        - web::source::url-path-params::nestjs
+      owasp:
+        - A01:2021 - Broken Access Control
+        - A05:2017 - Broken Access Control
+      references:
+        - https://nodejs.org/api/fs.html#promises-api
+        - https://owasp.org/Top10/A01_2021-Broken_Access_Control
+        - https://owasp.org/www-community/attacks/Path_Traversal
+        - https://portswigger.net/web-security/file-path-traversal
+      technology:
+        - express
+        - nestjs
+        - nodejs
+        - web
+      license: Semgrep Rules License v1.0. For more details, visit
+        semgrep.dev/legal/rules-license
+      vulnerability_class:
+        - Path Traversal
+    languages:
+      - javascript
+      - typescript
+    mode: taint
+    min-version: 1.98.0
+    options:
+      interfile: true
+      symbolic_propagation: true
+      taint_assume_safe_booleans: true
+      taint_assume_safe_numbers: true
+    pattern-sources:
+      - patterns:
+          - pattern-either:
+              - pattern: function $FN(..., @Request(...) $Q, ...) {...}
+              - pattern: function $FN(..., @Req(...) $Q, ...) {...}
+              - pattern: function $FN(..., @Response(...) $Q, ...) {...}
+              - pattern: function $FN(..., @Res(...) $Q, ...) {...}
+              - pattern: function $FN(..., @Body(...) $Q, ...) {...}
+              - pattern: function $FN(..., @Headers(...) $Q, ...) {...}
+              - pattern: function $FN(..., @Query(...) $Q, ...) {...}
+          - focus-metavariable: $Q
+      - label: FILES
+        patterns:
+          - patterns:
+              - pattern-either:
+                  - pattern: function $FN(..., @UploadedFile(...) $Q, ...) {...}
+                  - pattern: function $FN(..., @UploadedFiles(...) $Q, ...) {...}
+              - focus-metavariable: $Q
+      - label: __SOURCE__
+        patterns:
+          - patterns:
+              - pattern-either:
+                  - pattern: $FILE.originalname
+                  - pattern: $FILE.fieldname
+                  - pattern: $FILE.mimetype
+                  - pattern: $FILE.buffer
+        requires: FILES
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - patterns:
+                  - pattern: $PKG.$FUNC($SINK, ...)
+                  - semgrep-internal-metavariable-name:
+                      metavariable: $PKG
+                      modules:
+                        - fs
+                        - fs/promises
+                  - metavariable-regex:
+                      metavariable: $FUNC
+                      regex: (read|readSync|readlink|readlinkSync|readv|readvSync|readFile|readFileSync|write|writeSync|writev|writevSync|writeFile|writeFileSync|appendFile|appendFileSync|createReadStream|createWriteStream|readdir|readdirSync|open|openSync|opendir|opendirSync|rename|renameSync|unlinkSync|rmdir|rmdirSync|rm|rmSync|mkdir|mkdirSync|mkdtemp|mkdtempSync|symlink|symlinkSync|copyFile|cp|copyFileSync|cpSync)
+                  - focus-metavariable: $SINK
+              - patterns:
+                  - pattern: $PKG.$FUNC($SINK, ...)
+                  - semgrep-internal-metavariable-name:
+                      metavariable: $PKG
+                      modules:
+                        - fs
+                        - fs/promises
+                  - metavariable-regex:
+                      metavariable: $FUNC
+                      regex: (symlink|symlinkSync|link|linkSync|rename|renameSync)
+                  - focus-metavariable: $SINK
+              - patterns:
+                  - pattern: $PKG.$FUNC($ARG_1, $SINK, ...)
+                  - semgrep-internal-metavariable-name:
+                      metavariable: $PKG
+                      modules:
+                        - fs
+                        - fs/promises
+                  - metavariable-regex:
+                      metavariable: $FUNC
+                      regex: (symlink|symlinkSync|link|linkSync|rename|renameSync)
+                  - focus-metavariable: $SINK
+    pattern-sanitizers:
+      - patterns:
+          - pattern-either:
+              - pattern: Number(...)
+              - pattern: parseInt(...)
+              - pattern: parseFloat(...)
+              - pattern: Number.parseInt(...)
+              - pattern: Number.parseFloat(...)
+      - patterns:
+          - pattern: $UUID.$FUNC(...)
+          - metavariable-regex:
+              metavariable: $FUNC
+              regex: (version|validate|v6ToV1)
+          - semgrep-internal-metavariable-name:
+              metavariable: $UUID
+              module: uuid
+      - patterns:
+          - pattern: $DATE(...)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              modules:
+                - date-fns
+                - date-fns/fp
+                - moment
+                - luxon
+                - dayjs
+      - patterns:
+          - pattern: $DATE.$FUNC(...)
+          - metavariable-regex:
+              metavariable: $FUNC
+              regex: (utc|parseZone|tz)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              module: moment
+      - patterns:
+          - pattern: $DATE.parseJSON(...)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              modules:
+                - date-fns
+                - date-fns/fp
+      - patterns:
+          - pattern: $DATE.DateTime.$FUNC(...)
+          - metavariable-regex:
+              metavariable: $FUNC
+              regex: (fromISO|fromFormat|fromObject|fromString|fromSQL|fromHTTP|fromRFC2822|fromFormatExplain|fromStringExplain|fromFormatParser)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              modules:
+                - luxon
+      - patterns:
+          - pattern: $DATE.$OBJ.$FUNC(...)
+          - metavariable-regex:
+              metavariable: $OBJ
+              regex: (LocalDate|LocalDateTime|LocalTime|OffsetDateTime|OffsetTime|ZonedDateTime|DateTimeFormatter|OffsetDate|LocalDateRange|OffsetDate)
+          - metavariable-regex:
+              metavariable: $FUNC
+              regex: (parse|parse1|parse2)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              modules:
+                - "@js-joda/core"
+                - "@js-joda/timezone"
+                - "@js-joda/locale"
+                - "@js-joda/extra"
+      - pattern-either:
+          - pattern: new Date(...)
+          - pattern: Intl. ... .format(...)
+      - by-side-effect: true
+        patterns:
+          - pattern: $VALIDATOR.$FUNC($SINK,...)
+          - focus-metavariable: $SINK
+          - semgrep-internal-metavariable-name:
+              metavariable: $VALIDATOR
+              module: validator
+          - pattern-not: $V.contains(...)
+          - pattern-not: $V.equals(...)
+          - pattern-not: $V.isAfter(...)
+          - pattern-not: $V.isJSON(...)
+          - pattern-not: $V.isLength(...)
+          - pattern-not: $V.isLowercase(...)
+          - pattern-not: $V.isMultibyte(...)
+          - pattern-not: $V.isStrongPassword(...)
+          - pattern-not: $V.isURL(...)
+          - pattern-not: $V.isUppercase(...)
+          - pattern-not: $V.isVariableWidth(...)
+          - pattern-not: $V.matches(...)
+          - pattern-not: $V.unescape(...)
+          - pattern-not: $V.trim(...)
+          - pattern-not: $V.ltrim(...)
+          - pattern-not: $V.rtrim(...)
+      - patterns:
+          - pattern: $PATH.extname(...)
+          - semgrep-internal-metavariable-name:
+              metavariable: $PATH
+              modules:
+                - path
+                - node:path

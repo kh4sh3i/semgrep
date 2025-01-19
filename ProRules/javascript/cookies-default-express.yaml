@@ -1,0 +1,40 @@
+rules:
+  - id: cookies-default-express
+    message: "Having default cookie settings is insecure because they often lack
+      critical security attributes, leaving cookies vulnerable to various
+      attacks like CSRF or XSS. Always configure cookies with security
+      attributes: `HttpOnly`, `Secure`, `SameSite`."
+    severity: WARNING
+    metadata:
+      likelihood: MEDIUM
+      impact: MEDIUM
+      confidence: HIGH
+      category: security
+      subcategory:
+        - secure default
+      cwe:
+        - "CWE-732: Incorrect Permission Assignment for Critical Resource"
+      cwe2020-top25: true
+      cwe2021-top25: true
+      display-name: Default Cookie Settings in Express
+      functional-categories:
+        - web::search::cookie-config::express
+      references:
+        - https://cwe.mitre.org/data/definitions/732.html
+        - https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/06-Session_Management_Testing/02-Testing_for_Cookies_Attributes
+      technology:
+        - express
+      license: Semgrep Rules License v1.0. For more details, visit
+        semgrep.dev/legal/rules-license
+      vulnerability_class:
+        - Improper Authorization
+    languages:
+      - javascript
+      - typescript
+    min-version: 1.91.0
+    patterns:
+      - patterns:
+          - pattern-either:
+              - pattern-inside: function ... ($REQ, $RES) {...}
+              - pattern-inside: function ... ($REQ, $RES, $NEXT) {...}
+          - pattern: $RES.cookie($KEY,$VALUE)

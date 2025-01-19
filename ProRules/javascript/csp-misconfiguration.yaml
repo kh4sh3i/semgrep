@@ -1,0 +1,52 @@
+rules:
+  - id: csp-misconfiguration
+    message: Untrusted input could be used to tamper with a web page rendering,
+      which can lead to a Cross-site scripting (XSS) vulnerability. XSS
+      vulnerabilities occur when untrusted input executes malicious JavaScript
+      code, leading to issues such as account compromise and sensitive
+      information leakage. To prevent this vulnerability, validate the user
+      input, perform contextual output encoding or sanitize the input.
+    severity: WARNING
+    metadata:
+      likelihood: MEDIUM
+      impact: MEDIUM
+      confidence: HIGH
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-79: Improper Neutralization of Input During Web Page Generation
+          ('Cross-site Scripting')"
+      cwe2020-top25: true
+      cwe2021-top25: true
+      cwe2022-top25: true
+      display-name: Content Security Policy (CSP) Misconfiguration in Helmet
+      functional-categories:
+        - web::search::header-config::helmet
+      owasp:
+        - A03:2021 - Injection
+        - A07:2017 - Cross-Site Scripting (XSS)
+      references:
+        - https://owasp.org/Top10/A03_2021-Injection
+      technology:
+        - helmet
+      license: Semgrep Rules License v1.0. For more details, visit
+        semgrep.dev/legal/rules-license
+      vulnerability_class:
+        - Cross-Site-Scripting (XSS)
+    languages:
+      - javascript
+      - typescript
+    mode: taint
+    min-version: 1.91.0
+    pattern-sources:
+      - patterns:
+          - pattern-either:
+              - pattern: |
+                  {..., contentSecurityPolicy: false, ...}
+    pattern-sinks:
+      - patterns:
+          - pattern: $HELMET(...)
+          - semgrep-internal-metavariable-name:
+              metavariable: $HELMET
+              module: helmet

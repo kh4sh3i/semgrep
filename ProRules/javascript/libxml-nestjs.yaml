@@ -1,0 +1,205 @@
+rules:
+  - id: libxml-nestjs
+    message: The application is using an XML parser that has not been safely
+      configured. This might lead to XML External Entity (XXE) vulnerabilities
+      when parsing user-controlled input. An attacker can include document type
+      definitions (DTDs) or XIncludes which can interact with internal or
+      external hosts. XXE can lead to other vulnerabilities, such as Local File
+      Inclusion (LFI), Remote Code Execution (RCE), and Server-side request
+      forgery (SSRF), depending on the application configuration. An attacker
+      can also use DTDs to expand recursively, leading to a Denial-of-Service
+      (DoS) attack, also known as a `Billion Laughs Attack`. The best defense
+      against XXE is to have an XML parser that supports disabling DTDs.
+      Limiting the use of external entities from the start can prevent the
+      parser from being used to process untrusted XML files. Reducing
+      dependencies on external resources is also a good practice for performance
+      reasons. It is difficult to guarantee that even a trusted XML file on your
+      server or during transmission has not been tampered with by a malicious
+      third-party.
+    severity: ERROR
+    metadata:
+      likelihood: MEDIUM
+      impact: HIGH
+      confidence: HIGH
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-611: Improper Restriction of XML External Entity Reference"
+      cwe2020-top25: true
+      cwe2021-top25: true
+      cwe2022-top25: true
+      display-name: XML External Entity (XXE) in libxml with with NestJS
+      functional-categories:
+        - web::source::cookie::nestjs
+        - web::source::form-data::nestjs
+        - web::source::header::nestjs
+        - web::source::http-body::nestjs
+        - web::source::http-params::nestjs
+        - web::source::url-path-params::nestjs
+        - xml::sink::xml-parser::libxml
+      owasp:
+        - A04:2017 - XML External Entities (XXE)
+        - A05:2021 - Security Misconfiguration
+      references:
+        - https://owasp.org/Top10/A05_2021-Security_Misconfiguration
+      technology:
+        - express
+        - libxml
+        - nestjs
+        - nodejs
+        - web
+      license: Semgrep Rules License v1.0. For more details, visit
+        semgrep.dev/legal/rules-license
+      vulnerability_class:
+        - XML Injection
+    languages:
+      - javascript
+      - typescript
+    mode: taint
+    min-version: 1.98.0
+    options:
+      interfile: true
+      symbolic_propagation: true
+      taint_assume_safe_booleans: true
+      taint_assume_safe_numbers: true
+    pattern-sources:
+      - patterns:
+          - pattern-either:
+              - pattern: function $FN(..., @Request(...) $Q, ...) {...}
+              - pattern: function $FN(..., @Req(...) $Q, ...) {...}
+              - pattern: function $FN(..., @Response(...) $Q, ...) {...}
+              - pattern: function $FN(..., @Res(...) $Q, ...) {...}
+              - pattern: function $FN(..., @Body(...) $Q, ...) {...}
+              - pattern: function $FN(..., @Headers(...) $Q, ...) {...}
+              - pattern: function $FN(..., @Query(...) $Q, ...) {...}
+          - focus-metavariable: $Q
+      - patterns:
+          - pattern-either:
+              - pattern: function $FN(..., @Param(...) $Q, ...) {...}
+          - focus-metavariable: $Q
+      - label: FILES
+        patterns:
+          - patterns:
+              - pattern-either:
+                  - pattern: function $FN(..., @UploadedFile(...) $Q, ...) {...}
+                  - pattern: function $FN(..., @UploadedFiles(...) $Q, ...) {...}
+              - focus-metavariable: $Q
+      - label: __SOURCE__
+        patterns:
+          - patterns:
+              - pattern-either:
+                  - pattern: $FILE.originalname
+                  - pattern: $FILE.fieldname
+                  - pattern: $FILE.mimetype
+                  - pattern: $FILE.buffer
+        requires: FILES
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: $XML.$PARSE($SINK, {noent:true}, ...)
+              - patterns:
+                  - pattern-inside: |
+                      $OPTS = {noent:true};
+                      ...
+                  - pattern: $XML.$PARSE($SINK, $OPTS, ...)
+          - metavariable-regex:
+              metavariable: $PARSE
+              regex: (parseXmlAsync|parseXmlString|parseXml)
+          - semgrep-internal-metavariable-name:
+              metavariable: $XML
+              modules:
+                - libxmljs
+                - libxmljs2
+          - focus-metavariable: $SINK
+    pattern-sanitizers:
+      - patterns:
+          - pattern-either:
+              - pattern: Number(...)
+              - pattern: parseInt(...)
+              - pattern: parseFloat(...)
+              - pattern: Number.parseInt(...)
+              - pattern: Number.parseFloat(...)
+      - patterns:
+          - pattern: $UUID.$FUNC(...)
+          - metavariable-regex:
+              metavariable: $FUNC
+              regex: (version|validate|v6ToV1)
+          - semgrep-internal-metavariable-name:
+              metavariable: $UUID
+              module: uuid
+      - patterns:
+          - pattern: $DATE(...)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              modules:
+                - date-fns
+                - date-fns/fp
+                - moment
+                - luxon
+                - dayjs
+      - patterns:
+          - pattern: $DATE.$FUNC(...)
+          - metavariable-regex:
+              metavariable: $FUNC
+              regex: (utc|parseZone|tz)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              module: moment
+      - patterns:
+          - pattern: $DATE.parseJSON(...)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              modules:
+                - date-fns
+                - date-fns/fp
+      - patterns:
+          - pattern: $DATE.DateTime.$FUNC(...)
+          - metavariable-regex:
+              metavariable: $FUNC
+              regex: (fromISO|fromFormat|fromObject|fromString|fromSQL|fromHTTP|fromRFC2822|fromFormatExplain|fromStringExplain|fromFormatParser)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              modules:
+                - luxon
+      - patterns:
+          - pattern: $DATE.$OBJ.$FUNC(...)
+          - metavariable-regex:
+              metavariable: $OBJ
+              regex: (LocalDate|LocalDateTime|LocalTime|OffsetDateTime|OffsetTime|ZonedDateTime|DateTimeFormatter|OffsetDate|LocalDateRange|OffsetDate)
+          - metavariable-regex:
+              metavariable: $FUNC
+              regex: (parse|parse1|parse2)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              modules:
+                - "@js-joda/core"
+                - "@js-joda/timezone"
+                - "@js-joda/locale"
+                - "@js-joda/extra"
+      - pattern-either:
+          - pattern: new Date(...)
+          - pattern: Intl. ... .format(...)
+      - by-side-effect: true
+        patterns:
+          - pattern: $VALIDATOR.$FUNC($SINK,...)
+          - focus-metavariable: $SINK
+          - semgrep-internal-metavariable-name:
+              metavariable: $VALIDATOR
+              module: validator
+          - pattern-not: $V.contains(...)
+          - pattern-not: $V.equals(...)
+          - pattern-not: $V.isAfter(...)
+          - pattern-not: $V.isJSON(...)
+          - pattern-not: $V.isLength(...)
+          - pattern-not: $V.isLowercase(...)
+          - pattern-not: $V.isMultibyte(...)
+          - pattern-not: $V.isStrongPassword(...)
+          - pattern-not: $V.isURL(...)
+          - pattern-not: $V.isUppercase(...)
+          - pattern-not: $V.isVariableWidth(...)
+          - pattern-not: $V.matches(...)
+          - pattern-not: $V.unescape(...)
+          - pattern-not: $V.trim(...)
+          - pattern-not: $V.ltrim(...)
+          - pattern-not: $V.rtrim(...)

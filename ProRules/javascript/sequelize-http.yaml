@@ -1,0 +1,173 @@
+rules:
+  - id: sequelize-http
+    message: Untrusted input might be used to build a database query, which can lead
+      to a SQL injection vulnerability. An attacker can execute malicious SQL
+      statements and gain unauthorized access to sensitive data, modify, delete
+      data, or execute arbitrary system commands. To prevent this vulnerability,
+      use prepared statements that do not concatenate user-controllable strings
+      and use parameterized queries where SQL commands and user data are
+      strictly separated. Also, consider using an object-relational (ORM)
+      framework to operate with safer abstractions.
+    severity: ERROR
+    metadata:
+      likelihood: HIGH
+      impact: HIGH
+      confidence: HIGH
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-89: Improper Neutralization of Special Elements used in an SQL
+          Command ('SQL Injection')"
+      cwe2020-top25: true
+      cwe2021-top25: true
+      cwe2022-top25: true
+      display-name: SQL Injection in Sequelize with Node HTTP server
+      functional-categories:
+        - db::sink::sql-or-nosql-query::sequelize
+        - web::source::http-body
+      owasp:
+        - A01:2017 - Injection
+        - A03:2021 - Injection
+      references:
+        - https://owasp.org/Top10/A03_2021-Injection
+      technology:
+        - node
+        - nodejs
+        - sequelize
+        - web
+      license: Semgrep Rules License v1.0. For more details, visit
+        semgrep.dev/legal/rules-license
+      vulnerability_class:
+        - SQL Injection
+    languages:
+      - javascript
+      - typescript
+    mode: taint
+    min-version: 1.91.0
+    options:
+      interfile: true
+      symbolic_propagation: true
+      taint_assume_safe_booleans: true
+      taint_assume_safe_numbers: true
+    pattern-sources:
+      - patterns:
+          - pattern-either:
+              - pattern: $HTTP.createServer(function ($REQ,...) {...}, ...)
+              - pattern: $HTTP.createServer($OPTS, function ($REQ,...) {...}, ...)
+          - semgrep-internal-metavariable-name:
+              metavariable: $HTTP
+              modules:
+                - http
+                - https
+                - node:http
+                - node:https
+          - focus-metavariable: $REQ
+    pattern-propagators:
+      - from: $REQ
+        patterns:
+          - pattern: |
+              $REQ.on('data', $C => {
+              ...
+              $TO.$ANY(...)
+              ...
+              })
+        to: $TO
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: $DB.sequelize.query($SINK, ...)
+              - pattern: |
+                  ($DB: Sequelize).query($SINK,...)
+          - focus-metavariable: $SINK
+    pattern-sanitizers:
+      - patterns:
+          - pattern-either:
+              - pattern: Number(...)
+              - pattern: parseInt(...)
+              - pattern: parseFloat(...)
+              - pattern: Number.parseInt(...)
+              - pattern: Number.parseFloat(...)
+      - patterns:
+          - pattern: $UUID.$FUNC(...)
+          - metavariable-regex:
+              metavariable: $FUNC
+              regex: (version|validate|v6ToV1)
+          - semgrep-internal-metavariable-name:
+              metavariable: $UUID
+              module: uuid
+      - patterns:
+          - pattern: $DATE(...)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              modules:
+                - date-fns
+                - date-fns/fp
+                - moment
+                - luxon
+                - dayjs
+      - patterns:
+          - pattern: $DATE.$FUNC(...)
+          - metavariable-regex:
+              metavariable: $FUNC
+              regex: (utc|parseZone|tz)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              module: moment
+      - patterns:
+          - pattern: $DATE.parseJSON(...)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              modules:
+                - date-fns
+                - date-fns/fp
+      - patterns:
+          - pattern: $DATE.DateTime.$FUNC(...)
+          - metavariable-regex:
+              metavariable: $FUNC
+              regex: (fromISO|fromFormat|fromObject|fromString|fromSQL|fromHTTP|fromRFC2822|fromFormatExplain|fromStringExplain|fromFormatParser)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              modules:
+                - luxon
+      - patterns:
+          - pattern: $DATE.$OBJ.$FUNC(...)
+          - metavariable-regex:
+              metavariable: $OBJ
+              regex: (LocalDate|LocalDateTime|LocalTime|OffsetDateTime|OffsetTime|ZonedDateTime|DateTimeFormatter|OffsetDate|LocalDateRange|OffsetDate)
+          - metavariable-regex:
+              metavariable: $FUNC
+              regex: (parse|parse1|parse2)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              modules:
+                - "@js-joda/core"
+                - "@js-joda/timezone"
+                - "@js-joda/locale"
+                - "@js-joda/extra"
+      - pattern-either:
+          - pattern: new Date(...)
+          - pattern: Intl. ... .format(...)
+      - by-side-effect: true
+        patterns:
+          - pattern: $VALIDATOR.$FUNC($SINK,...)
+          - focus-metavariable: $SINK
+          - semgrep-internal-metavariable-name:
+              metavariable: $VALIDATOR
+              module: validator
+          - pattern-not: $V.contains(...)
+          - pattern-not: $V.equals(...)
+          - pattern-not: $V.isAfter(...)
+          - pattern-not: $V.isJSON(...)
+          - pattern-not: $V.isLength(...)
+          - pattern-not: $V.isLowercase(...)
+          - pattern-not: $V.isMultibyte(...)
+          - pattern-not: $V.isStrongPassword(...)
+          - pattern-not: $V.isURL(...)
+          - pattern-not: $V.isUppercase(...)
+          - pattern-not: $V.isVariableWidth(...)
+          - pattern-not: $V.matches(...)
+          - pattern-not: $V.unescape(...)
+          - pattern-not: $V.trim(...)
+          - pattern-not: $V.ltrim(...)
+          - pattern-not: $V.rtrim(...)

@@ -1,0 +1,69 @@
+rules:
+  - id: ATS-CA-pins
+    message: The application's App Transport Security (ATS) configuration leverages
+      the in-built public key pinning mechanisms however has pins which are
+      Certificate Authority Identities, rather than Leaf Identities. Trusting a
+      Certificate Authority is much more lenient than trusting a single leaf
+      identity. Consider pinning to leaf identities rather than CA, following
+      the principle of least privelege.
+    severity: WARNING
+    metadata:
+      likelihood: LOW
+      impact: LOW
+      confidence: HIGH
+      category: security
+      subcategory:
+        - audit
+      cwe: "CWE-272: Least Privilege Violation"
+      masvs:
+        - "MASVS-NETWORK-2: The app performs identity pinning for all remote
+          endpoints under the developer's control."
+      references:
+        - https://mobile-security.gitbook.io/mobile-security-testing-guide/ios-testing-guide/0x06g-testing-network-communication
+      technology:
+        - ios
+        - macos
+      license: Semgrep Rules License v1.0. For more details, visit
+        semgrep.dev/legal/rules-license
+      vulnerability_class:
+        - Other
+    languages:
+      - xml
+    options:
+      symbolic_propagation: true
+    paths:
+      include:
+        - Info.plist
+    patterns:
+      - pattern: |
+          <plist ...>
+          <dict>
+          ...
+          <key>NSAppTransportSecurity</key>
+          <dict>
+          ...
+          <key>NSPinnedDomains</key>
+            <dict>
+              <key>...</key>
+              <dict>
+              ...
+              <key>$ENTITYTYPE</key>
+              <array>
+                <dict>
+                ...
+                <key>$HASH</key>
+                ...
+                </dict>
+              </array>
+              </dict>
+            </dict>
+          ...
+          </dict>
+          ...
+          </dict>
+          </plist>
+      - metavariable-comparison:
+          metavariable: $ENTITYTYPE
+          comparison: str($ENTITYTYPE) == "NSPinnedCAIdentities"
+      - focus-metavariable:
+          - $ENTITYTYPE

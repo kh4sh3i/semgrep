@@ -1,0 +1,48 @@
+rules:
+  - id: ATS-local-networking
+    message: The application's App Transport Security (ATS) configuration allows for
+      local networking, which in some iOS versions is blocked by default in ATS.
+      Consider whether or not the application requires this in release builds,
+      or for development reasons only. This follows the principle of least
+      privelege, reducing the attack surface if local networking is not
+      required.
+    severity: WARNING
+    metadata:
+      likelihood: LOW
+      impact: LOW
+      confidence: HIGH
+      category: security
+      subcategory:
+        - audit
+      cwe: "CWE-272: Least Privilege Violation"
+      masvs:
+        - "MASVS-NETWORK-1: The app secures all network traffic according to the
+          current best practices."
+      references:
+        - https://mobile-security.gitbook.io/mobile-security-testing-guide/ios-testing-guide/0x06g-testing-network-communication
+      technology:
+        - ios
+        - macos
+      license: Semgrep Rules License v1.0. For more details, visit
+        semgrep.dev/legal/rules-license
+      vulnerability_class:
+        - Other
+    languages:
+      - xml
+    options:
+      symbolic_propagation: true
+    paths:
+      include:
+        - Info.plist
+    patterns:
+      - pattern: |
+          <dict>
+          ...
+          <key>$KEY</key>
+          <true/>
+          ...
+          </dict>
+      - metavariable-comparison:
+          metavariable: $KEY
+          comparison: str($KEY) == "NSAllowsLocalNetworking"
+      - focus-metavariable: $KEY

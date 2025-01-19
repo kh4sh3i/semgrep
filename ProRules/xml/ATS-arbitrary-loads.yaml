@@ -1,0 +1,51 @@
+rules:
+  - id: ATS-arbitrary-loads
+    message: The application's App Transport Security (ATS) configuration allows for
+      insecure HTTP connections. The `NSAllowsArbitraryLoads` and
+      `NSTemporaryExceptionAllowsInsecureHTTPLoads` property keys can be used to
+      allow HTTP for all domains or a particular domain respectively. HTTPs
+      should be used in all cases, to ensure secure communications - protecting
+      data in transport.
+    severity: WARNING
+    metadata:
+      likelihood: MEDIUM
+      impact: MEDIUM
+      confidence: HIGH
+      category: security
+      subcategory:
+        - audit
+      cwe: "CWE-319: Cleartext Transmission of Sensitive Information"
+      masvs:
+        - "MASVS-NETWORK-1: The app secures all network traffic according to the
+          current best practices."
+      owasp:
+        - A03:2017 - Sensitive Data Exposure
+        - A02:2021 - Cryptographic Failures
+      references:
+        - https://mobile-security.gitbook.io/mobile-security-testing-guide/ios-testing-guide/0x06g-testing-network-communication
+      technology:
+        - ios
+        - macos
+      license: Semgrep Rules License v1.0. For more details, visit
+        semgrep.dev/legal/rules-license
+      vulnerability_class:
+        - Mishandled Sensitive Information
+    languages:
+      - xml
+    options:
+      symbolic_propagation: true
+    paths:
+      include:
+        - Info.plist
+    patterns:
+      - pattern: |
+          <dict>
+          ...
+          <key>$KEY</key>
+          <true/>
+          ...
+          </dict>
+      - metavariable-regex:
+          metavariable: $KEY
+          regex: ^(NSAllowsArbitraryLoads|NSTemporaryExceptionAllowsInsecureHTTPLoads)$
+      - focus-metavariable: $KEY

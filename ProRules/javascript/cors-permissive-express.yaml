@@ -1,0 +1,54 @@
+rules:
+  - id: cors-permissive-express
+    message: A permissive Cross-Origin Resource Sharing (CORS) vulnerability occurs
+      when a server's CORS policy allows any origin to access its resources or
+      improperly validates allowed origins. This can enable attackers to make
+      unauthorized cross-origin requests, potentially exposing sensitive data to
+      malicious websites. Avoid using wildcard (*) origins, especially for
+      endpoints that handle sensitive data. Use a restrictive CORS policy by
+      explicitly specifying trusted origins in the Access-Control-Allow-Origin
+      header.
+    severity: WARNING
+    metadata:
+      likelihood: MEDIUM
+      impact: MEDIUM
+      confidence: HIGH
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-346: Origin Validation Error"
+      display-name: CORS Misconfiguration with Express
+      functional-categories:
+        - web::sink::header::cors
+      owasp:
+        - A07:2021 - Identification and Authentication Failures
+      references:
+        - https://owasp.org/Top10/A07_2021-Identification_and_Authentication_Failures
+      technology:
+        - cors
+        - express
+      license: Semgrep Rules License v1.0. For more details, visit
+        semgrep.dev/legal/rules-license
+      vulnerability_class:
+        - Improper Authentication
+    languages:
+      - javascript
+      - typescript
+    mode: taint
+    min-version: 1.91.0
+    pattern-sources:
+      - patterns:
+          - pattern: |
+              {origin: $ORIGIN}
+          - metavariable-regex:
+              metavariable: $ORIGIN
+              regex: ^['"`]?(\*|null)['"`]?$
+    pattern-sinks:
+      - patterns:
+          - pattern: $CORS($OPTS)
+          - focus-metavariable: $OPTS
+          - semgrep-internal-metavariable-name:
+              metavariable: $CORS
+              modules:
+                - cors

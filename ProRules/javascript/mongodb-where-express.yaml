@@ -1,0 +1,377 @@
+rules:
+  - id: mongodb-where-express
+    message: Untrusted input might be used to build a database query, which can lead
+      to a NoSQL injection vulnerability. An attacker can execute malicious
+      NoSQL statements and gain unauthorized access to sensitive data, modify,
+      delete data, or execute arbitrary system commands. Make sure all user
+      input is validated and sanitized, and avoid using tainted user input to
+      construct NoSQL statements if possible. Ideally, avoid raw queries and
+      instead use parameterized queries.
+    severity: ERROR
+    metadata:
+      likelihood: HIGH
+      impact: HIGH
+      confidence: HIGH
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-943: Improper Neutralization of Special Elements in Data Query
+          Logic"
+      display-name: NoSQL Injection in MongoDB with Express
+      functional-categories:
+        - db::sink::sql-or-nosql-query::mongodb
+        - web::source::cookie::express
+        - web::source::form-data::express
+        - web::source::header::express
+        - web::source::http-body::express
+        - web::source::http-params::express
+        - web::source::url-path-params::express
+      owasp:
+        - A01:2017 - Injection
+      references:
+        - https://owasp.org/Top10/A03_2021-Injection
+        - https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/05.6-Testing_for_NoSQL_Injection
+        - https://portswigger.net/web-security/nosql-injection
+      supersedes:
+        - javascript.express.mongodb.express-mongo-nosqli.express-mongo-nosqli
+      technology:
+        - db
+        - express
+        - mongodb
+        - nosql
+        - web
+      license: Semgrep Rules License v1.0. For more details, visit
+        semgrep.dev/legal/rules-license
+      vulnerability_class:
+        - Improper Validation
+    languages:
+      - javascript
+      - typescript
+    mode: taint
+    min-version: 1.91.0
+    options:
+      interfile: true
+      symbolic_propagation: true
+      taint_assume_safe_booleans: true
+      taint_assume_safe_numbers: true
+    pattern-sources:
+      - pattern-either:
+          - patterns:
+              - pattern-either:
+                  - pattern-inside: function ... ($REQ, $RES) {...}
+                  - pattern-inside: function ... ($REQ, $RES, $NEXT) {...}
+              - focus-metavariable: $REQ
+              - pattern-either:
+                  - pattern: $REQ.query
+                  - pattern: $REQ.body
+                  - pattern: $REQ.cookies
+                  - pattern: $REQ.headers
+                  - pattern: $REQ.headersDistinct
+                  - pattern: $REQ.rawHeaders
+                  - pattern: $REQ.get(...)
+                  - pattern: $REQ.header(...)
+          - patterns:
+              - pattern-either:
+                  - pattern-inside: |
+                      function ... ({ $REQ }: Request, $RES) {...}
+                  - pattern-inside: |
+                      function ... ({ $REQ }: $EXPRESS.Request, $RES) {...}
+                  - pattern-inside: |
+                      function ... ({ $REQ }: Request, $RES, $NEXT) {...}
+                  - pattern-inside: >
+                      function ... ({ $REQ }: $EXPRESS.Request, $RES, $NEXT)
+                      {...}
+              - focus-metavariable: $REQ
+              - pattern-either:
+                  - pattern: query
+                  - pattern: body
+                  - pattern: cookies
+                  - pattern: headers
+                  - pattern: headersDistinct
+                  - pattern: rawHeaders
+                  - pattern: get(...)
+                  - pattern: header(...)
+      - pattern-either:
+          - patterns:
+              - pattern-either:
+                  - pattern-inside: function ... ($REQ, $RES) {...}
+                  - pattern-inside: function ... ($REQ, $RES, $NEXT) {...}
+              - focus-metavariable: $REQ
+              - pattern-either:
+                  - pattern: $REQ.params
+          - patterns:
+              - pattern-either:
+                  - pattern-inside: |
+                      function ... ({ $REQ }: Request, $RES) {...}
+                  - pattern-inside: |
+                      function ... ({ $REQ }: $EXPRESS.Request, $RES) {...}
+                  - pattern-inside: |
+                      function ... ({ $REQ }: Request, $RES, $NEXT) {...}
+                  - pattern-inside: >
+                      function ... ({ $REQ }: $EXPRESS.Request, $RES, $NEXT)
+                      {...}
+              - focus-metavariable: $REQ
+              - pattern-either:
+                  - pattern: params
+      - label: FILES
+        patterns:
+          - pattern-either:
+              - patterns:
+                  - pattern-either:
+                      - pattern-inside: function ... ($REQ, $RES) {...}
+                      - pattern-inside: function ... ($REQ, $RES, $NEXT) {...}
+                  - focus-metavariable: $REQ
+                  - pattern-either:
+                      - pattern: $REQ.file
+                      - pattern: $REQ.files
+              - patterns:
+                  - pattern-either:
+                      - pattern-inside: |
+                          function ... ({ $REQ }: Request, $RES) {...}
+                      - pattern-inside: |
+                          function ... ({ $REQ }: $EXPRESS.Request, $RES) {...}
+                      - pattern-inside: |
+                          function ... ({ $REQ }: Request, $RES, $NEXT) {...}
+                      - pattern-inside: >
+                          function ... ({ $REQ }: $EXPRESS.Request, $RES, $NEXT)
+                          {...}
+                  - focus-metavariable: $REQ
+                  - pattern-either:
+                      - pattern: file
+                      - pattern: files
+      - label: __SOURCE__
+        patterns:
+          - patterns:
+              - pattern-either:
+                  - pattern: $FILE.originalname
+                  - pattern: $FILE.fieldname
+                  - pattern: $FILE.mimetype
+                  - pattern: $FILE.buffer
+        requires: FILES
+      - label: MONGODB_CLIENT
+        patterns:
+          - patterns:
+              - pattern-either:
+                  - pattern: new $MONGODB.MongoClient(...)
+                  - pattern: $MONGODB.MongoClient.connect(...)
+              - semgrep-internal-metavariable-name:
+                  metavariable: $MONGODB
+                  module: mongodb
+      - label: MONGODB_DB
+        patterns:
+          - pattern: $CLIENT.db(...)
+        requires: MONGODB_CLIENT
+      - label: MONGODB_COLLECTION
+        patterns:
+          - pattern-either:
+              - pattern: $CLIENT.collection(...)
+              - pattern: $CLIENT.collections(...)
+        requires: MONGODB_DB
+      - label: WHERE
+        patterns:
+          - pattern: |
+              {$where: $FILTER}
+        requires: __SOURCE__
+    pattern-propagators:
+      - by-side-effect: false
+        from: $SINK
+        label: __SOURCE__
+        patterns:
+          - patterns:
+              - pattern-either:
+                  - pattern: $CLIENT.deleteMany($SINK, ...)
+                  - pattern: $CLIENT.deleteOne($SINK, ...)
+                  - pattern: $CLIENT.find($SINK, ...)
+                  - pattern: $CLIENT.findOne($SINK, ...)
+                  - pattern: $CLIENT.findOneAndDelete($SINK, ...)
+                  - pattern: $CLIENT.findOneAndReplace($SINK, ...)
+                  - pattern: $CLIENT.findOneAndUpdate($SINK, ...)
+                  - pattern: $CLIENT.aggregate($SINK, ...)
+                  - pattern: $CLIENT.bulkWrite($SINK, ...)
+                  - pattern: $CLIENT.replaceOne($SINK, ...)
+                  - pattern: $CLIENT.updateMany($SINK, ...)
+                  - pattern: $CLIENT.updateOne($SINK, ...)
+        requires: __SOURCE__
+        to: $CLIENT
+      - by-side-effect: false
+        from: $DB
+        label: MONGODB_DB
+        patterns:
+          - patterns:
+              - pattern-either:
+                  - pattern: $DB.collection(...).deleteMany($SINK, ...)
+                  - pattern: $DB.collection(...).deleteOne($SINK, ...)
+                  - pattern: $DB.collection(...).find($SINK, ...)
+                  - pattern: $DB.collection(...).findOne($SINK, ...)
+                  - pattern: $DB.collection(...).findOneAndDelete($SINK, ...)
+                  - pattern: $DB.collection(...).findOneAndReplace($SINK, ...)
+                  - pattern: $DB.collection(...).findOneAndUpdate($SINK, ...)
+                  - pattern: $DB.collection(...).aggregate($SINK, ...)
+                  - pattern: $DB.collection(...).bulkWrite($SINK, ...)
+                  - pattern: $DB.collection(...).replaceOne($SINK, ...)
+                  - pattern: $DB.collection(...).updateMany($SINK, ...)
+                  - pattern: $DB.collection(...).updateOne($SINK, ...)
+        requires: MONGODB_DB
+        to: $SINK
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: $CLIENT.deleteMany($SINK, ...)
+              - pattern: $CLIENT.deleteOne($SINK, ...)
+              - pattern: $CLIENT.find($SINK, ...)
+              - pattern: $CLIENT.findOne($SINK, ...)
+              - pattern: $CLIENT.findOneAndDelete($SINK, ...)
+              - pattern: $CLIENT.findOneAndReplace($SINK, ...)
+              - pattern: $CLIENT.findOneAndUpdate($SINK, ...)
+              - pattern: $CLIENT.aggregate($SINK, ...)
+              - pattern: $CLIENT.bulkWrite($SINK, ...)
+              - pattern: $CLIENT.replaceOne($SINK, ...)
+              - pattern: $CLIENT.updateMany($SINK, ...)
+              - pattern: $CLIENT.updateOne($SINK, ...)
+          - focus-metavariable: $CLIENT
+        requires: __SOURCE__ and WHERE and MONGODB_COLLECTION
+      - patterns:
+          - pattern-either:
+              - pattern: $DB.collection(...).deleteMany($SINK, ...)
+              - pattern: $DB.collection(...).deleteOne($SINK, ...)
+              - pattern: $DB.collection(...).find($SINK, ...)
+              - pattern: $DB.collection(...).findOne($SINK, ...)
+              - pattern: $DB.collection(...).findOneAndDelete($SINK, ...)
+              - pattern: $DB.collection(...).findOneAndReplace($SINK, ...)
+              - pattern: $DB.collection(...).findOneAndUpdate($SINK, ...)
+              - pattern: $DB.collection(...).aggregate($SINK, ...)
+              - pattern: $DB.collection(...).bulkWrite($SINK, ...)
+              - pattern: $DB.collection(...).replaceOne($SINK, ...)
+              - pattern: $DB.collection(...).updateMany($SINK, ...)
+              - pattern: $DB.collection(...).updateOne($SINK, ...)
+          - focus-metavariable: $SINK
+        requires: __SOURCE__ and WHERE and MONGODB_DB
+    pattern-sanitizers:
+      - patterns:
+          - pattern-either:
+              - pattern: Number(...)
+              - pattern: parseInt(...)
+              - pattern: parseFloat(...)
+              - pattern: Number.parseInt(...)
+              - pattern: Number.parseFloat(...)
+      - patterns:
+          - pattern: $UUID.$FUNC(...)
+          - metavariable-regex:
+              metavariable: $FUNC
+              regex: (version|validate|v6ToV1)
+          - semgrep-internal-metavariable-name:
+              metavariable: $UUID
+              module: uuid
+      - patterns:
+          - pattern: $DATE(...)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              modules:
+                - date-fns
+                - date-fns/fp
+                - moment
+                - luxon
+                - dayjs
+      - patterns:
+          - pattern: $DATE.$FUNC(...)
+          - metavariable-regex:
+              metavariable: $FUNC
+              regex: (utc|parseZone|tz)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              module: moment
+      - patterns:
+          - pattern: $DATE.parseJSON(...)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              modules:
+                - date-fns
+                - date-fns/fp
+      - patterns:
+          - pattern: $DATE.DateTime.$FUNC(...)
+          - metavariable-regex:
+              metavariable: $FUNC
+              regex: (fromISO|fromFormat|fromObject|fromString|fromSQL|fromHTTP|fromRFC2822|fromFormatExplain|fromStringExplain|fromFormatParser)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              modules:
+                - luxon
+      - patterns:
+          - pattern: $DATE.$OBJ.$FUNC(...)
+          - metavariable-regex:
+              metavariable: $OBJ
+              regex: (LocalDate|LocalDateTime|LocalTime|OffsetDateTime|OffsetTime|ZonedDateTime|DateTimeFormatter|OffsetDate|LocalDateRange|OffsetDate)
+          - metavariable-regex:
+              metavariable: $FUNC
+              regex: (parse|parse1|parse2)
+          - semgrep-internal-metavariable-name:
+              metavariable: $DATE
+              modules:
+                - "@js-joda/core"
+                - "@js-joda/timezone"
+                - "@js-joda/locale"
+                - "@js-joda/extra"
+      - pattern-either:
+          - pattern: new Date(...)
+          - pattern: Intl. ... .format(...)
+      - by-side-effect: true
+        patterns:
+          - pattern: $VALIDATOR.$FUNC($SINK,...)
+          - focus-metavariable: $SINK
+          - semgrep-internal-metavariable-name:
+              metavariable: $VALIDATOR
+              module: validator
+          - pattern-not: $V.contains(...)
+          - pattern-not: $V.equals(...)
+          - pattern-not: $V.isAfter(...)
+          - pattern-not: $V.isJSON(...)
+          - pattern-not: $V.isLength(...)
+          - pattern-not: $V.isLowercase(...)
+          - pattern-not: $V.isMultibyte(...)
+          - pattern-not: $V.isStrongPassword(...)
+          - pattern-not: $V.isURL(...)
+          - pattern-not: $V.isUppercase(...)
+          - pattern-not: $V.isVariableWidth(...)
+          - pattern-not: $V.matches(...)
+          - pattern-not: $V.unescape(...)
+          - pattern-not: $V.trim(...)
+          - pattern-not: $V.ltrim(...)
+          - pattern-not: $V.rtrim(...)
+      - patterns:
+          - pattern: $MONGO_SANITIZE(...)
+          - semgrep-internal-metavariable-name:
+              metavariable: $MONGO_SANITIZE
+              modules:
+                - mongo-sanitize
+                - express-mongo-sanitize
+      - pattern: String(...)
+      - pattern: new $MONGODB.ObjectId(...)
+      - pattern: new ObjectId(...)
+      - pattern: $MONGODB.ObjectId(...)
+      - pattern: ObjectId(...)
+      - by-side-effect: true
+        patterns:
+          - pattern: $MONGODB.ObjectId.isValid($TEST)
+          - focus-metavariable: $TEST
+      - by-side-effect: true
+        patterns:
+          - pattern: ObjectId.isValid($TEST)
+          - focus-metavariable: $TEST
+      - by-side-effect: true
+        patterns:
+          - pattern: Array.isArray($TEST)
+          - focus-metavariable: $TEST
+      - patterns:
+          - pattern-either:
+              - pattern: "{$eq:$COMP}"
+              - pattern: "{$gt:$COMP}"
+              - pattern: "{$gte:$COMP}"
+              - pattern: "{$in:$COMP}"
+              - pattern: "{$lt:$COMP}"
+              - pattern: "{$lte:$COMP}"
+              - pattern: "{$ne:$COMP}"
+              - pattern: "{$nin:$COMP}"
+              - pattern: "{$nin:$COMP}"
+              - pattern: "{$text:$COMP}"
+          - focus-metavariable: $COMP

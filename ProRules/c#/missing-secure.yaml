@@ -1,0 +1,51 @@
+rules:
+  - id: missing-secure
+    message: Detected a cookie where the `Secure` flag is either missing or
+      disabled. The `Secure` cookie flag instructs the browser to forbid sending
+      the cookie over an insecure HTTP request. Set the `Secure` flag to `true`
+      so the cookie will only be sent over HTTPS. If this wasn't intentional,
+      it's recommended to set the Secure flag to true so the cookie will only be
+      sent over HTTPS or to use the Cookie Policy Middleware to globally set the
+      Secure flag. You can then use the CookieOptions class when instantiating
+      the cookie, which inherits these settings and will require future
+      developers to have to explicitly override them on a case-by-case basis if
+      needed. This approach ensures cookies are secure by default.
+    severity: WARNING
+    metadata:
+      likelihood: LOW
+      impact: LOW
+      confidence: HIGH
+      category: security
+      subcategory:
+        - secure default
+      cwe:
+        - "CWE-614: Sensitive Cookie in HTTPS Session Without 'Secure' Attribute"
+      display-name: Missing 'Secure' Attribute in Cookie
+      functional-categories:
+        - web::source::cookie::.NET
+      owasp:
+        - A05:2021 - Security Misconfiguration
+      references:
+        - https://learn.microsoft.com/en-us/aspnet/core/security/authentication/cookie?view=aspnetcore-8.0#cookie-policy-middleware
+        - https://learn.microsoft.com/en-us/dotnet/api/microsoft.aspnetcore.http.cookieoptions
+        - https://owasp.org/Top10/A05_2021-Security_Misconfiguration
+      technology:
+        - cookies
+      license: Semgrep Rules License v1.0. For more details, visit
+        semgrep.dev/legal/rules-license
+      vulnerability_class:
+        - Cookie Security
+    languages:
+      - csharp
+    options:
+      symbolic_propagation: true
+    patterns:
+      - pattern-either:
+          - pattern: var $COOKIE = new HttpCookie(...);
+          - pattern: HttpCookie $COOKIE = ...;
+          - patterns:
+              - pattern: $BUILDER. ... .AddCookie($VALUE, $COOKIE => {...});
+              - focus-metavariable: $COOKIE
+      - pattern-not-inside: |
+          ...
+          $COOKIE. ... .Secure = ...;

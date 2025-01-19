@@ -1,0 +1,51 @@
+rules:
+  - id: ATS-minimum-tls-version
+    message: The application's App Transport Security (ATS) configuration lowers the
+      minimum TLS version requirement for one or more domains. This potentially
+      reduces the efficacy of the transport layer security, allowing for older,
+      more vulnerable versions of TLS to be utilized.
+    severity: WARNING
+    metadata:
+      likelihood: LOW
+      impact: MEDIUM
+      confidence: HIGH
+      category: security
+      subcategory:
+        - vuln
+      cwe: "CWE-757: Selection of Less-Secure Algorithm During Negotiation ('Algorithm
+        Downgrade')"
+      masvs:
+        - "MASVS-NETWORK-1: The app secures all network traffic according to the
+          current best practices."
+      references:
+        - https://mobile-security.gitbook.io/mobile-security-testing-guide/ios-testing-guide/0x06g-testing-network-communication
+      technology:
+        - ios
+        - macos
+      license: Semgrep Rules License v1.0. For more details, visit
+        semgrep.dev/legal/rules-license
+      vulnerability_class:
+        - Other
+    languages:
+      - xml
+    options:
+      symbolic_propagation: true
+    paths:
+      include:
+        - Info.plist
+    patterns:
+      - pattern: |
+          <dict>
+          ...
+          <key>$KEY</key>
+          ...
+          </dict>
+      - metavariable-comparison:
+          metavariable: $KEY
+          comparison: str($KEY) == "NSTemporaryExceptionMinimumTLSVersion"
+      - patterns:
+          - pattern: <string>$VALUE</string>
+      - focus-metavariable: $VALUE
+      - metavariable-regex:
+          metavariable: $VALUE
+          regex: ^(TLSv1.0|TLSv1.1|TLSv1.2)$
