@@ -60,3 +60,15 @@ semgrep scan --config="RULESET-ID" --config=PATH/TO/MYRULE.YAML PATH/TO/SRC
 semgrep scan -config=/ProRules/   PATH/TO/sourcecode
 ```
 
+## Pro analysis
+```
+python3 -m pip install --upgrade semgrep
+semgrep login
+semgrep install-semgrep-pro
+```
+
+
+## refrences
+* [semgrep.dev](https://semgrep.dev/docs/semgrep-code/semgrep-pro-engine-intro#run-cross-file-analysis-in-the-cli)
+
+
