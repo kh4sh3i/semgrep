@@ -15,15 +15,14 @@ Semgrep is an open-source static analysis tool designed to find vulnerabilities,
 
 * Core Feature: It uses abstract syntax tree (AST) pattern matching, allowing it to detect issues based on the structure of code rather than simple text patterns.
 
-* Key Benefits:
+### Key Benefits:
 
 *   Fast and Flexible: Performs static analysis quickly and can be adapted to various codebases.
 *   Precision: Detects vulnerabilities that might be missed by traditional text-based tools.
 *   Customizability: Allows users to write their own rules or use pre-defined ones from the Semgrep Registry.
 *   Security and Quality: Helps identify security vulnerabilities (e.g., SQL injection, XSS) and improve code quality by enforcing best practices.
 *   Supported Languages: Semgrep supports several popular programming languages, including Python, JavaScript, Java, Go, and more.
-
-* CI/CD Integration: Seamlessly integrates with CI/CD pipelines (e.g., GitLab, GitHub) for continuous static analysis, making it an excellent tool for DevSecOps teams.
+*   CI/CD Integration: Seamlessly integrates with CI/CD pipelines (e.g., GitLab, GitHub) for continuous static analysis, making it an excellent tool for DevSecOps teams.
 
 
 ### Use Cases:
@@ -31,3 +30,5 @@ Semgrep is an open-source static analysis tool designed to find vulnerabilities,
 * Automating code review to detect vulnerabilities early.
 * Enforcing code style guidelines.
 * Integrating into the security testing pipeline for proactive vulnerability detection.
+
+
