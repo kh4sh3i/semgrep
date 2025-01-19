@@ -72,6 +72,17 @@ semgrep install-semgrep-pro
 semgrep --config auto --pro
 ```
 
+## Learn Semgrep Syntax
+```
+https://semgrep.dev/learn
+```
+
+## execute live code
+```
+https://semgrep.dev/playground/new
+```
+
+
 
 ## refrences
 * [semgrep.dev](https://semgrep.dev/docs/semgrep-code/semgrep-pro-engine-intro#run-cross-file-analysis-in-the-cli)
