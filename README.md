@@ -33,7 +33,7 @@ Semgrep is an open-source static analysis tool designed to find vulnerabilities,
 
 
 ## Install Semgrep
-```
+```bash
 pip install semgrep
 semgrep --version
 ```
@@ -44,7 +44,7 @@ https://github.com/semgrep/semgrep-rules
 ```
 
 ## Integrate into CI/CD Pipeline
-```
+```bash
 stages:
   - test
 
@@ -56,7 +56,7 @@ test:
 
 ## Running Semgrep rules locally
 tips : in offline mode we should download all rules from this [repo](https://github.com/semgrep/semgrep-rules) or use pro rule that upload above.
-```
+```bash
 semgrep scan --config="RULESET-ID" --config=PATH/TO/MYRULE.YAML PATH/TO/SRC
 semgrep scan -config=/ProRules/   PATH/TO/sourcecode
 ```
@@ -65,7 +65,7 @@ semgrep scan -config=/ProRules/   PATH/TO/sourcecode
 we can login to https://semgrep.dev/orgs/-/settings to use semgrep portal,
 we upload localy project to semgrep portal and we can use pro rule and some sca !
 
-```
+```bash
 python3 -m pip install --upgrade semgrep
 semgrep login
 semgrep install-semgrep-pro
@@ -86,7 +86,7 @@ https://semgrep.dev/playground/new
 
 ## Create a Basic Custom Rule
 * Example 1: Detecting Hardcoded Passwords in Python
-```
+```bash
 # hardcoded_password_rule.yml
 rules:
   - id: python-hardcoded-password
@@ -100,7 +100,7 @@ rules:
 ```
 
 * Example 2: Detecting Use of eval in Python (Potential Security Risk)
-```
+```bash
 # use_of_eval_rule.yml
 rules:
   - id: python-use-of-eval
