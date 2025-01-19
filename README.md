@@ -70,6 +70,8 @@ python3 -m pip install --upgrade semgrep
 semgrep login
 semgrep install-semgrep-pro
 semgrep --config auto --pro
+go to root of git repo and run
+semgrep ci
 ```
 
 ## Learn Semgrep Syntax
@@ -82,6 +84,34 @@ https://semgrep.dev/learn
 https://semgrep.dev/playground/new
 ```
 
+## Create a Basic Custom Rule
+* Example 1: Detecting Hardcoded Passwords in Python
+```
+# hardcoded_password_rule.yml
+rules:
+  - id: python-hardcoded-password
+    pattern: |
+      password = "$PASSWORD"
+    message: "Hardcoded password detected. Avoid hardcoding sensitive information."
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: security
+```
+
+* Example 2: Detecting Use of eval in Python (Potential Security Risk)
+```
+# use_of_eval_rule.yml
+rules:
+  - id: python-use-of-eval
+    pattern: |
+      eval($EXPR)
+    message: "Avoid using eval(). It can lead to code injection vulnerabilities."
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: security
+```
 
 
 ## refrences
