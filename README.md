@@ -113,6 +113,58 @@ rules:
       category: security
 ```
 
+* Example 3: find xss in commnet
+```bash
+# xss_commnet.yml
+rules:
+  - id: xss-i
+    message: "possible xss in commnet"
+    severity: WARNING
+    languages: [generic]
+    metadata:
+      category: security
+    patterns:
+      - pattern: -comment ...
+      - pattern-not: -comment-list ...
+      
+```
+
+* Example 4: find sqli injection in sqlkata
+```bash
+# sqli_sqlkata.yml
+rules:
+  - id: sqli_sqlkata
+    message: "possible sqli in sqlkata library via WhereRaw query"
+    severity: WARNING
+    languages: [generic]
+    metadata:
+      category: security
+    pattern-either:
+      - pattern: WhereRaw(...) ...
+      - pattern: FromSqlRaw(...) ...
+      - pattern: OrWhereRaw(...) ...
+      
+```
+
+* Example 4: find unauth endpoint via controller
+```bash
+# unauth.yml
+rules:
+  - id: unauth
+    message: "possible unauth endpoint via controller"
+    severity: WARNING
+    languages: [generic]
+    metadata:
+      category: security
+    patterns:
+      - pattern: class $M ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ...
+      - pattern-regex: (HttpPost|HttpGet)
+      - metavariable-regex:
+          metavariable: '$M'
+          regex: '.*(ExternalController).*'
+      
+```
+
 
 ## refrences
 * [semgrep.dev](https://semgrep.dev/docs/semgrep-code/semgrep-pro-engine-intro#run-cross-file-analysis-in-the-cli)
